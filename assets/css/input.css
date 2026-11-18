@@ -4,3 +4,17 @@
 
 /* Секції нижче першого екрана рендеряться лише при наближенні до viewport */
 main > section:nth-of-type(n+3) { content-visibility: auto; contain-intrinsic-size: auto 700px; }
+
+/* iOS Safari: поля дати й часу мають власну мінімальну ширину і виходять за межі картки — скидаємо */
+input[type="date"], input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
