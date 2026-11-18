@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Секції нижче першого екрана рендеряться лише при наближенні до viewport */
+main > section:nth-of-type(n+3) { content-visibility: auto; contain-intrinsic-size: auto 700px; }
