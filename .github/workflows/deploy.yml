@@ -1,0 +1,78 @@
+# CI/CD: при кожному push у main збираємо Tailwind CSS, перевіряємо сайт і публікуємо на Vercel.
+# Потрібний секрет репозиторію (Settings → Secrets and variables → Actions → New repository secret):
+#   VERCEL_TOKEN — токен доступу Vercel (Account Settings → Tokens → Create)
+# Токен не зберігається в коді: у workflow він береться лише з ${{ secrets.VERCEL_TOKEN }}.
+name: Build and deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_PROJECT_NAME: retro-auto-lab12   # назва проєкту на Vercel (створиться при першому деплої)
+
+jobs:
+  build:
+    name: Build and check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build Tailwind CSS, run checks, prepare dist/
+        run: npm run build
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Vercel (production)
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Link Vercel project
+        working-directory: dist
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest link --yes --project "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+
+      - name: Deploy to Vercel
+        working-directory: dist
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
